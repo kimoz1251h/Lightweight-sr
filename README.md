@@ -2,8 +2,7 @@
 
 CSE 681 -- Advanced Digital Image and Video Processing (team project, catalog entry C16)
 
-Team: Abdelhakeem Osama Abdelhakeem (2600322), Mohamed Mostafa Mahmoud Mohamed (2400066),
-Mohammed Mahmoud Mohammed Saad (2400043)
+Team: Abdelhakeem Osama Abdelhakeem (2600322)
 
 This repository contains a small PyTorch pipeline that trains and benchmarks lightweight
 x2/x4 single-image super-resolution (SR) models and measures PSNR/SSIM against parameters,
