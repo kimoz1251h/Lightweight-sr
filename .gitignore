@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+*.tmp
+
+# datasets (licenses do not allow redistribution)
+sr_data/
+
+# resume files and generated samples
+ckpt_*_last.pth
+sample_*.png
+
+# LaTeX build files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc

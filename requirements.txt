@@ -1,0 +1,6 @@
+# Python 3.10+
+# Replace these lines with the exact versions from your environment (see README instructions):
+#   python -c "import torch, torchvision, PIL; print('torch==' + torch.__version__.split('+')[0]); print('torchvision==' + torchvision.__version__.split('+')[0]); print('pillow==' + PIL.__version__)"
+torch>=2.0
+torchvision>=0.15
+pillow>=9.1

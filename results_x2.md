@@ -1,0 +1,7 @@
+| model              | params | GMACs@720p (learned convs) | CPU ms@720p (end-to-end, 4T, median) | BSDS100 PSNR/SSIM | Set14 PSNR/SSIM | Set5 PSNR/SSIM | manga109 PSNR/SSIM | urban100 PSNR/SSIM | avg PSNR | avg SSIM |
+|--------------------|--------|----------------------------|--------------------------------------|-------------------|-----------------|----------------|--------------------|--------------------|----------|----------|
+| bicubic            | 0      | 0.000                      | 15                                   | 29.74 / 0.8495    | 30.56 / 0.8750  | 33.97 / 0.9330 | 31.25 / 0.9384     | 27.07 / 0.8456     | 30.52    | 0.8883   |
+| fsrcnn_x2          | 24,683 | 5.607                      | 159                                  | 30.63 / 0.8789    | 31.53 / 0.8971  | 35.15 / 0.9445 | 32.78 / 0.9499     | 28.01 / 0.8705     | 31.62    | 0.9082   |
+| efficient_c48b6_x2 | 37,932 | 8.460                      | 448                                  | 31.59 / 0.8920    | 32.79 / 0.9103  | 37.16 / 0.9573 | 36.57 / 0.9715     | 30.14 / 0.9055     | 33.65    | 0.9273   |
+
+Note: GMACs count only the learned conv / transposed-conv layers. The bicubic skip (and the bicubic baseline's interpolation) is NOT counted in GMACs, but IS included in the end-to-end CPU runtime, so runtime can differ between models with equal GMACs.
