@@ -1,0 +1,484 @@
+\documentclass[11pt,a4paper]{article}
+
+% ============================================================
+% Milestone 1 -- Project Proposal & Literature Review
+% DIP Team Project (follows the course Section 6.1 template)
+% ============================================================
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[round,authoryear]{natbib}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, citecolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{float}
+\newcommand{\todo}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\title{\LARGE Project Proposal \& Literature Review \\[4pt]
+\large Lightweight Real-Time Super-Resolution for Edge/Laptop Deployment}
+
+\author{
+  Abdelhakeem Osama Abdelhakeem (2600322) \and
+  Student B  \and
+  Student C 
+}
+
+\date{Milestone 1 --- 2 November 2026 \\{} CSE\,681 --- Advanced Digital Image and Video Processing}
+
+\begin{document}
+\maketitle
+
+% ============================================================
+\begin{abstract}
+Single-image super-resolution (SISR) aims to reconstruct a high-resolution
+(HR) image from a low-resolution observation. Although modern
+deep-learning-based SISR methods achieve strong reconstruction quality,
+many require substantial computational resources, making them unsuitable
+for CPU-based or resource-constrained deployment.
+
+This project investigates the trade-off between reconstruction quality and
+computational efficiency for lightweight real-time super-resolution,
+adapting efficiency-oriented evaluation principles from the NTIRE and AIM
+challenges \citep{ren2025ntire,aim2025}. A compact $\times2/\times4$
+network is proposed, using lightweight residual blocks based on
+depthwise-separable convolutions, PixelShuffle upsampling, and an optional
+global bicubic skip connection.
+
+The model will be compared against bicubic interpolation and the
+lightweight learned baselines FSRCNN and ESPCN
+\citep{dong2016fsrcnn,shi2016espcn}, trained on DIV2K
+\citep{agustsson2017div2k} and tested on Set5, Set14, BSD100, Urban100 and
+Manga109. We report Y-channel PSNR/SSIM, parameters, GMACs and measured
+CPU latency, to determine whether a low computational cost also gives
+genuinely low real-world CPU latency, rather than relying on FLOP/GMAC
+counts alone.
+\end{abstract}
+
+% ============================================================
+\section{Problem Statement \& Motivation}
+\label{sec:motivation}
+
+Single-image super-resolution is an inverse problem in which an HR image is
+reconstructed from a lower-resolution (LR) observation. The task connects
+directly to the course material on interpolation and resampling, spatial
+filtering and convolution, and learned image restoration. However, achieving
+high reconstruction quality can require substantial computational resources,
+which makes super-resolution models difficult to deploy on CPUs or
+resource-constrained devices. This project therefore focuses on the
+relationship between image quality and computational efficiency.
+
+The main research question is:
+
+\begin{quote}
+\textit{Can a lightweight super-resolution model achieve competitive image
+quality while maintaining genuinely low CPU inference latency?}
+\end{quote}
+
+The project compares image quality, parameter count, computational cost,
+and measured inference time. In particular, it investigates whether a lower
+GMAC count necessarily corresponds to lower real-world CPU latency.
+
+% ============================================================
+\section{Related Work}
+\label{sec:related}
+
+\begin{table}[h]
+\centering
+\caption{Key references.}
+\label{tab:refs}
+\small
+\begin{tabular}{@{}p{0.30\linewidth}p{0.08\linewidth}p{0.55\linewidth}@{}}
+\toprule
+\textbf{Reference} & \textbf{Year} & \textbf{Relevance to this project} \\
+\midrule
+NTIRE 2025 Efficient SR report \citep{ren2025ntire} & 2025 &
+Efficiency-oriented evaluation methodology combining quality with
+parameters, FLOPs and runtime; adapted to our CPU-oriented
+$\times2/\times4$ evaluation. \\
+
+AIM 2025 efficient perceptual SR \citep{aim2025} & 2025 &
+Reports quality together with parameters and computational cost; motivates
+our quality--efficiency reporting. \\
+
+
+FSRCNN \citep{dong2016fsrcnn} & 2016 &
+Compact fast SR network; our main learned baseline. \\
+
+ESPCN \citep{shi2016espcn} & 2016 &
+Introduces sub-pixel convolution (PixelShuffle), used in our model; second
+baseline. \\
+
+DIV2K \citep{agustsson2017div2k} & 2017 &
+Training and validation dataset. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Recent super-resolution research emphasizes not only reconstruction quality
+but also computational efficiency and practical deployment constraints.
+The NTIRE 2025 Efficient Super-Resolution Challenge investigated efficient
+SR using image quality together with computational cost and runtime
+\citep{ren2025ntire}. The AIM 2025 efficient perceptual SR benchmark
+reports model parameters and computational cost alongside perceptual
+metrics \citep{aim2025}. We adopt this practice of reporting quality and
+cost together, while our project focuses on PSNR/SSIM and measured CPU
+latency.
+
+We adapt the NTIRE 2025 evaluation methodology rather than reproducing its
+exact competition setup. In particular, our study evaluates $\times2$ and
+$\times4$ super-resolution, measures inference latency on a CPU, and
+reports GMACs at a $1280\times720$ output resolution. This differs from the
+NTIRE 2025 setup, which focuses on $\times4$ SR and reports computational
+cost and runtime under its own evaluation protocol.
+
+FSRCNN introduced a compact convolutional architecture designed for fast SR,
+showing that efficient networks can reach competitive quality with far
+fewer computations than earlier approaches \citep{dong2016fsrcnn}. ESPCN
+proposed sub-pixel convolution, where upscaling is performed at the end of
+the network using PixelShuffle, so that most feature extraction happens in
+LR space \citep{shi2016espcn}. FSRCNN introduced a compact convolutional architecture designed for fast SR,
+showing that efficient networks can reach competitive quality with far fewer
+computations than earlier approaches \citep{dong2016fsrcnn}. ESPCN proposed
+sub-pixel convolution, where upscaling is performed at the end of the network
+using PixelShuffle, so that most feature extraction happens in LR space
+\citep{shi2016espcn}. These ideas motivate our use of LR-domain feature
+extraction and PixelShuffle-based upsampling. DIV2K is used as the main
+training and validation dataset \citep{agustsson2017div2k}.
+DIV2K is a high-quality benchmark widely used for training and evaluating
+SISR models \citep{agustsson2017div2k}.
+
+Building on these ideas, this project focuses on a reproducible,
+CPU-oriented comparison between lightweight architectures. Rather than
+attempting state-of-the-art quality, it studies the practical relationship
+between model size, GMACs, image quality and measured CPU latency, together
+with width/depth ablations and an optional global bicubic skip connection.
+
+% ============================================================
+\section{Dataset \& Baseline Plan}
+\label{sec:data}
+
+\subsection{Datasets}
+
+Training uses DIV2K (800 HR training images; 100 validation images). LR
+images are generated by bicubic downsampling (PIL bicubic resampling).
+Training operates on randomly sampled, scale-aligned $96\times96$ HR
+patches, with about 20 patches per image per epoch, and augmentation by
+horizontal/vertical flips and $90^\circ$ rotation. During development a
+validation subset of 20--50 images is used to reduce evaluation time; final
+experiments use the complete validation/test protocol where practical.
+
+\begin{table}[h]
+\centering
+\caption{Dataset summary.}
+\label{tab:data}
+\small
+\begin{tabular}{@{}p{0.14\linewidth}p{0.27\linewidth}p{0.27\linewidth}p{0.22\linewidth}@{}}
+\toprule
+\textbf{Dataset} & \textbf{Subset used} & \textbf{License} & \textbf{Link} \\
+\midrule
+DIV2K & 800 train / 20--50 val (dev), 100 val (final) &
+Academic research use &
+\url{data.vision.ee.ethz.ch/cvl/DIV2K} \\
+Set5 & 5 images (test) & Research use & BasicSR dataset guide \\
+Set14 & 14 images (test) & Research use & BasicSR dataset guide \\
+BSD100 & 100 images (test) & Research use & BasicSR dataset guide \\
+Urban100 & 100 images (test) & Research use & BasicSR dataset guide \\
+Manga109 & 109 images (test) &
+Academic use only; images not redistributed (not placed in the public
+repository) & BasicSR dataset guide \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The BasicSR dataset-preparation guide
+(\url{github.com/XPixelGroup/BasicSR/blob/master/docs/DatasetPreparation.md})
+is used for the benchmark sets; the final report will document the exact
+source and license of each.
+
+\subsection{Baselines}
+
+\begin{enumerate}
+    \item \textbf{Bicubic interpolation} as a non-learning baseline.
+    \item \textbf{FSRCNN} \citep{dong2016fsrcnn}: main configuration
+    $d=56$, $s=12$, $m=4$, retrained on DIV2K at $\times2$ and $\times4$.
+    \item \textbf{ESPCN} \citep{shi2016espcn} as an additional lightweight
+    learned baseline.
+\end{enumerate}
+
+All learned models use identical preprocessing and evaluation: Y-channel
+(ITU-R BT.601) PSNR/SSIM with border shaving and 8-bit rounding. CPU
+measurements use the same output resolution, hardware, thread count and
+timing protocol for all models.
+
+% ============================================================
+\section{Proposed Method}
+\label{sec:method}
+
+The proposed model, \textbf{EfficientSR}, performs most feature extraction
+in the LR domain and postpones spatial upsampling to the end of the network:
+
+\begin{align*}
+\text{LR}
+&\rightarrow
+3{\times}3\text{ Head}
+\rightarrow
+N\text{ Lightweight Residual Blocks (+ long skip from head)} \\
+&\rightarrow
+\text{Tail Conv}
+\rightarrow
+\text{PixelShuffle}
+\rightarrow
++\,\text{Bicubic Skip}
+\rightarrow
+\text{SR}.
+\end{align*}
+
+Each residual block consists of a depthwise $3\times3$ convolution, a
+pointwise $1\times1$ convolution, a PReLU activation, a second pointwise
+$1\times1$ convolution, and a residual connection. The tail convolution
+produces $3s^2$ channels ($s$ = scale factor), rearranged by PixelShuffle
+into the HR image. The global bicubic skip provides a strong low-cost base
+reconstruction:
+\[
+I_{\mathrm{SR}} = I_{\mathrm{network}} + I_{\mathrm{bicubic}},
+\]
+so the convolutional network mainly learns the missing high-frequency
+detail. An ablation without this skip measures its contribution.
+
+The controllable parameters are the feature width $C$ and the number of
+blocks $N$, allowing models with different computational costs to be
+evaluated. EfficientSR is developed under an explicit computational budget
+of at most $100{,}000$ trainable parameters and at most $10$ GMACs for a
+$1280\times720$ output. The expected configurations contain roughly
+$2\times10^4$--$6\times10^4$ parameters and about 3--9 GMACs, depending on
+scale, width and depth.
+
+Training uses the $L_1$ loss
+\[
+\mathcal{L} = \left\| I_{\mathrm{SR}} - I_{\mathrm{HR}} \right\|_1,
+\]
+with the Adam optimizer and a step learning-rate schedule. Because
+depthwise convolutions have low theoretical computational cost but may
+exhibit different practical behavior on CPUs, measured CPU runtime is
+reported together with parameter count and GMACs rather than relying on
+theoretical cost alone.
+
+% ============================================================
+\section{Evaluation Metrics \& Preliminary Baseline Results}
+\label{sec:eval}
+
+\textbf{Image quality:} PSNR and SSIM, computed on the Y channel following
+the conventional SR protocol (borders shaved, outputs rounded to 8 bit).
+
+\textbf{Efficiency:} number of trainable parameters; GMACs for a
+$1280\times720$ output; measured CPU latency (median of 20 runs, fixed
+thread count, after warm-up); and model size where relevant.
+
+The final analysis compares PSNR/SSIM against CPU runtime and computational
+cost. Our implementation reports computational complexity in GMACs,
+whereas the NTIRE reports use FLOPs. Since one multiply-accumulate
+operation is approximately two floating-point operations, FLOPs
+$\approx 2\times$ MACs, so GMAC and GFLOP values must not be compared
+directly without this conversion.
+
+Table~\ref{tab:prelim} gives the baseline numbers obtained with our
+evaluation pipeline for $\times2$. The bicubic row is final for this
+milestone. The FSRCNN row is a \emph{preliminary} result from the best
+checkpoint of a training run that was still in progress (epoch 48 of 65).
+LR images are generated with PIL bicubic resampling rather than MATLAB
+\texttt{imresize}, so absolute values may differ slightly from published
+tables; all methods here share the same protocol, so comparisons between
+them remain fair. The preliminary FSRCNN scores are also below published
+values, which we attribute to the short, still unfinished training schedule
+and the RGB-input, DIV2K-only setup; we will check this against the final
+checkpoint.
+
+\begin{table}[h]
+\centering
+\caption{Preliminary $\times2$ baseline results: Y-channel PSNR (dB) / SSIM.}
+\label{tab:prelim}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Model} & \textbf{Set5} & \textbf{Set14} & \textbf{BSD100} &
+\textbf{Urban100} & \textbf{Manga109} & \textbf{Avg.} \\
+\midrule
+Bicubic & 33.97 / 0.9330 & 30.56 / 0.8750 & 29.74 / 0.8495 &
+27.07 / 0.8456 & 31.25 / 0.9384 & 30.52 / 0.8883 \\
+FSRCNN (prelim.) & 35.08 / 0.9441 & 31.50 / 0.8967 & 30.62 / 0.8786 &
+27.99 / 0.8702 & 32.71 / 0.9493 & 31.58 / 0.9078 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+FSRCNN (24,683 parameters, 5.607 GMACs for a $1280\times720$ output)
+improves the average PSNR by about 1.06\,dB over bicubic. Its measured
+end-to-end CPU time (4 threads on the Intel Core i5-11400H, median) was about
+203\,ms, versus about 25\,ms for bicubic. These timings were taken while
+training was running on the same machine, so they will be re-measured on an
+idle machine for the final report.
+
+% ============================================================
+\section{Feasibility \& Compute Plan}
+\label{sec:feasibility}
+
+The project is CPU-OK / GPU-light: training and evaluation use small
+patches, compact models, and CPU inference is the deployment target.
+EfficientSR is developed under an explicit computational budget of at most
+$100{,}000$ trainable parameters and at most $10$ GMACs for a
+$1280\times720$ output.
+
+Training was run on an NVIDIA GeForce RTX 3060 Laptop GPU (6\,GB), with an
+11th Gen Intel Core i5-11400H CPU (6 cores, 12 threads) and 16\,GB of RAM,
+with batch size 32 and 50 validation images, using the FSRCNN $\times2$
+configuration. With $96\times96$ HR patches and about 20 patches per image,
+one epoch took about 512--600\,s for training and 523--609\,s including
+validation (roughly 9--10 minutes). The model reached a validation PSNR of
+33.84--33.85\,dB (SSIM 0.9275) on the DIV2K validation subset. At this rate
+a full 65-epoch run takes about 10 hours. The speed is limited mainly by
+decoding large DIV2K images for patch sampling rather than by the network
+itself, so cached pre-extracted crops, fewer patches per image, or smaller
+models will be used for ablation experiments. Checkpointing and resume
+functionality are implemented. Inference is measured on the CPU with a fixed
+thread configuration, reporting the median of about 20 runs.
+
+
+
+\subsection{Minimum Viable Deliverable (MVP)}
+
+\begin{enumerate}
+    \item A complete $\times2$ super-resolution pipeline.
+    \item At least one complete $\times4$ experiment, with a matching
+    FSRCNN $\times4$ baseline.
+    \item Bicubic baseline numbers (PSNR/SSIM) on the test sets
+    (Table~\ref{tab:prelim}).
+    \item Trained FSRCNN baseline.
+    \item At least one trained EfficientSR configuration.
+    \item Evaluation on at least one standard benchmark dataset.
+    \item PSNR/SSIM, parameter, GMAC and CPU-time measurements.
+    \item A recorded demo ($\le$5 minutes) of the trained model enlarging
+    images on the CPU.
+\end{enumerate}
+
+\subsection{Stretch Goal}
+
+\begin{itemize}
+    \item Full $\times2$ and $\times4$ experiments on all five benchmark sets.
+    \item Width/depth computational-budget ablation.
+    \item Bicubic global-skip ablation.
+    \item ESPCN baseline.
+    \item A live real-time or near-real-time demonstration.
+\end{itemize}
+
+% ============================================================
+\section{Risk Assessment}
+\label{sec:risk}
+
+\begin{table}[h]
+\centering
+\caption{Risk assessment.}
+\label{tab:risks}
+\small
+\begin{tabular}{@{}p{0.38\linewidth}p{0.55\linewidth}@{}}
+\toprule
+\textbf{Risk} & \textbf{Mitigation} \\
+\midrule
+Slow training (about 9--10 minutes per epoch in our measurements) &
+Cached crops, fewer patches per image, checkpointing/resume, limited
+validation during development. \\
+
+Depthwise convolution has low GMACs but high CPU latency &
+Measure real CPU runtime; compare with a standard-convolution variant at
+matched GMACs. \\
+
+Dataset format or preprocessing inconsistencies &
+Consistent preprocessing pipeline; document the exact evaluation
+protocol. \\
+
+EfficientSR does not outperform FSRCNN at a comparable budget &
+Treat the comparison itself as a result and analyze the quality/latency
+trade-off. \\
+
+Training instability &
+Checkpointing, fixed validation procedure, conservative training
+configuration before larger experiments. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% ============================================================
+\section{Work Breakdown}
+\label{sec:workbreakdown}
+
+\begin{table}[H]
+\centering
+\caption{Milestone task allocation.}
+\label{tab:tasks}
+\small
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.15}
+
+\begin{tabularx}{\textwidth}{@{}p{0.10\textwidth}X X X@{}}
+\toprule
+\textbf{Milestone} &
+\textbf{Student A --- Data \& Baseline} &
+\textbf{Student B --- Model/Algorithm} &
+\textbf{Student C --- Evaluation} \\
+\midrule
+
+M1 (Wk 3) &
+DIV2K + 5 benchmark-set pipeline; FSRCNN baseline scoped &
+Design EfficientSR architecture within the parameter/GMAC budget &
+Define PSNR/SSIM + CPU-runtime protocol; bicubic baseline numbers \\
+
+M2 (Wk 6) &
+FSRCNN baseline trained; evaluated on test sets &
+EfficientSR first checkpoint &
+Preliminary PSNR/SSIM-vs-runtime comparison; verify timing pipeline
+(1 benchmark set) \\
+
+M3 (Wk 9) &
+Final FSRCNN numbers, all test sets &
+Final model + parameter/GMAC-budget and bicubic-skip ablations; at least one
+$\times4$ EfficientSR experiment &
+Full PSNR/SSIM/runtime table across all 5 sets; final report, repo, demo \\
+
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent
+\textbf{Deliverables:} M1: proposal + bicubic baseline numbers; M2: progress
+report with one benchmark-set result; M3: final report, repository and demo.
+% ============================================================
+\section{Expected Outcome}
+
+A reproducible experimental study of lightweight single-image
+super-resolution under practical CPU deployment constraints. The project
+will produce quantitative comparisons between reconstruction quality and
+computational efficiency, and test whether parameter count and GMACs are
+sufficient indicators of practical inference speed, or whether choices such
+as depthwise convolution create a mismatch between theoretical cost and
+measured CPU latency.
+
+% ============================================================
+\section{AI Use Disclosure}
+
+AI assistance (ChatGPT and Claude) was used for LaTeX drafting,
+clarification of technical concepts, and code debugging. All technical
+decisions, experiments, results, and final content were reviewed and
+verified by the team.
+
+% ============================================================
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
